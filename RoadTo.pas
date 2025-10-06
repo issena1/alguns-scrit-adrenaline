@@ -1,20 +1,20 @@
 // ARQUIVO: RoadTo.pas
-// Esta unit contÈm um procedimento para executar um caminho de movimento predefinido.
+// Esta unit cont√©m um procedimento para executar um caminho de movimento predefinido.
+// um teste para usar a fun√ß√£o de carregar scripts do adrrenaline
 
 
-unit RoadTo; // Nome da Unit (deve corresponder ao nome do arquivo .pas)
+unit RoadTo;
 
 
-
-interface // SeÁ„o de Interface
+interface // Se√ß√£o de Interface
 
 uses sysutils;
 
-// DeclaraÁ„o do procedimento que executa o caminho
+// Declara√ß√£o do procedimento que executa o caminho
 procedure Giants;
 procedure road(local: string);
 
-implementation // SeÁ„o de ImplementaÁ„o: Detalhes internos do procedimento
+implementation // Se√ß√£o de Implementa√ß√£o: Detalhes internos do procedimento
 
 procedure Giants;
 
@@ -45,4 +45,4 @@ aux := LowerCase(local);
 if (aux = 'giant') or (aux = 'giants')then
    giants;
 end;
-end. // Fim da Unit
+end.
