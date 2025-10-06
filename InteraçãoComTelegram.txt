@@ -1,0 +1,223 @@
+uses
+  SysUtils;
+uses  Classes;
+uses RoadTo;
+uses RoadToGk;
+var
+  keylist: array of string;
+  sl: TStringList;
+// Função alternativa para BoolToStr se não estiver disponível
+function MyBoolToStr(b: Boolean): string;
+begin
+  if b then
+    Result := 'True'
+  else
+    Result := 'False';
+end;
+
+function keycomando(const texto: string; const palavras: array of string): string;
+var
+  i: Integer;
+begin
+  Result := '';
+  for i := Low(palavras) to High(palavras) do
+  begin
+    if Pos(LowerCase(palavras[i]), LowerCase(texto)) = 1 then
+    begin
+      Result := palavras[i];
+      Exit;
+    end;
+  end;
+end;
+
+function comando(key, texto: string): string;
+begin
+  Result := '';
+  texto := Trim(texto);
+  if Length(texto) > Length(key) then
+    Result := Trim(Copy(texto, Length(key) + 1, Length(texto)));
+end;
+
+function verificaComando(texto: string; palavras: array of string): Boolean;
+begin
+  Result := keycomando(texto, palavras) <> '';
+  if not Result then
+    Print('Comando Inválido');
+end;
+
+function falarComNpc(nome: string): Boolean;
+begin
+  Result := False;
+  if Engine.SetTarget(nome) then
+    begin
+      Engine.dlgOpen;
+      Result := True;
+      criaTxt('talkpas.txt', 'true');
+    end
+    else begin
+      criaTxt('talkpas.txt', 'false');
+    end;
+end;
+
+function dlgSel(dlg: string): Boolean;
+begin
+  Result := false;
+  if Engine.DlgSel(dlg) then begin
+    Result := true;
+    criaTxt('talkpas.txt', 'true');
+  end
+  else begin
+    criaTxt('talkpas.txt', 'false');
+  end;
+end;
+
+function Teleport(alvo: string): Boolean;
+
+var x, y, z: integer;
+
+begin
+  Result := false;
+  x := User.X; y := User.Y; z := User.Z;
+  Engine.DlgSel('Teleport');
+  delay(500);
+  Engine.DlgSel(alvo);
+  while User.InRange(x, y, z, 1000, 1000) do begin
+    delay(1000);
+  end;
+  while not Engine.SetTarget(User.name) do begin
+    delay(1000);
+  end;
+  Result := true;
+  criaTxt('talkpas.txt', 'true');
+end;
+
+function road(s: string): boolean;
+
+begin
+   criaTxt('talkpas.txt', 'Caminhando');
+   RoadTo.Road(s);
+   Result := true;
+   criaTxt('talkpas.txt', 'true');
+end;
+
+function unstuck():Boolean;
+var x, y, z: integer;
+begin
+  x := User.X; y := User.Y; z:= User.Z;
+  Engine.CancelTarget;
+  criaTxt('talkpas.txt', 'true');
+  Engine.EnterText('/unstuck');
+  while User.InRange(x, y, z, 300, 300) do begin
+    delay(3000);
+  end;
+  while not Engine.SetTarget(user.name) do begin
+    Delay(1000);
+  end;
+  Engine.CancelTarget;
+  criaTxt('talkpas.txt', 'unstuck');
+  Result := true;
+  
+end;
+
+function gk(s: string): Boolean;
+var nome: string;
+begin
+  nome := RoadToGK.GK(s);
+  criaTxt('talkpas.txt', nome);
+  Result:=true;
+end;
+
+function pegaComando(name_arq: string):String;
+  begin
+    Result := '';
+    sl := TStringList.Create;
+    try
+      if not FileExists(name_arq) then begin
+        //Print('Comando ainda não declarado');
+        Exit;
+      end;
+      sl.LoadFromFile(name_arq);
+      Result := sl.Text;
+      DeleteFile(name_arq);
+    finally
+      sl.Free;
+    end;
+    
+  end;
+
+function criaTxt(arquivo_nome: string; msg: string = ''): Boolean;
+var
+  sl: TStringList;
+begin
+  Result := False; // Assume falha por padrão
+
+  sl := TStringList.Create;
+  try
+    try
+      // 1. Deleta o arquivo se ele já existe
+      if FileExists(arquivo_nome) then
+      begin
+        if not DeleteFile(arquivo_nome) then
+        begin
+          Writeln('Aviso: Não foi possível deletar o arquivo existente: ' + arquivo_nome);
+          // Se não conseguir deletar, pode ser que esteja em uso ou sem permissão.
+          // Decide se quer continuar ou abortar. Por enquanto, vamos tentar sobrescrever.
+        end;
+      end;
+
+      // 2. Adiciona o conteúdo ao TStringList
+      // Certifique-se de que UserX, UserY, UserZ estão definidos e têm valores válidos
+      sl.add(msg);
+      // 3. Salva no arquivo (usando o nome passado como parâmetro)
+      sl.SaveToFile(arquivo_nome); 
+      print('Arquivo "' + arquivo_nome + '" criado com sucesso!');
+      Result := True; // Indica sucesso
+      sl.Free;
+      except
+      on E: Exception do
+      begin
+        Writeln('Erro ao criar/salvar o arquivo "' + arquivo_nome + '": ' + E.Message);
+        Result := False; // Indica falha
+      end;
+    end;
+  finally
+    sl.Free; // Garante que o TStringList seja liberado
+  end;
+end;
+
+  
+var
+  ms: string;
+  cmd, arg: string;
+begin
+  keylist := ['talk', 'dlg', 'move', 'teleport', 'unstuck', 'gk'];
+  while true do begin
+    ms := pegaComando('talkpy.txt');
+    if ms= '' then begin
+      delay(1000);
+      continue;
+    end;
+    cmd := keycomando(ms, keylist);
+    Print('Comando: ' + cmd);
+  
+    arg := comando(cmd, ms);
+    Print('Argumento: ' + arg);
+  
+    if verificaComando(ms, keylist) then
+    begin
+      if cmd = 'talk' then
+        Print('Resultado: ' + MyBoolToStr(falarComNpc(arg)))
+      else if cmd = 'dlg' then
+        Print('Abrindo diálogo: ' + MyBoolToStr(dlgSel(arg)))
+      else if cmd = 'move' then
+        Print('Diálogo Confirmado: ' + MyBoolToStr(road(arg)))
+      else if cmd = 'teleport' then
+        Print('Personagem Teleportado: ' + MyBoolToStr(teleport(arg)))
+      else if cmd = 'unstuck' then
+        unstuck
+      else if (cmd = 'gk') then
+        Print('Movendo: ' + MyBoolToStr(gk(arg)))
+    end;
+    Delay(1000);
+  end;
+end.

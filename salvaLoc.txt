@@ -1,0 +1,30 @@
+program SalvarLocalizacaoV2;
+
+uses
+  Classes; // Para TStringList
+uses  sysutils;
+procedure save;
+var
+  sl: TStringList;
+begin
+  sl := TStringList.Create;
+  try
+    if FileExists('coordenadas.txt') then
+      sl.LoadFromFile('coordenadas.txt');
+  
+    // Adiciona novo registro
+    sl.Add(Format('Engine.MoveTo(%d,%d,%d);', 
+      [User.X, User.Y, User.Z]));
+    
+    // Salva no arquivo
+    sl.SaveToFile('coordenadas.txt');
+    Print('Localização registrada!');
+  finally
+    sl.Free;
+  end;
+end;
+
+begin
+  save;
+  //Engine.MoveTo(147638,27054,-2206)
+end.

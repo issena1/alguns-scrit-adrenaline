@@ -1,0 +1,17 @@
+var x, y, z: integer;
+const
+  MinX = 80895;
+  MaxX = 82964;
+  MaxY = 149566;
+  MinY = 147645;
+  constZ = -3471;
+
+begin
+x := User.X; y := User.Y; z := User.Z;
+if ((x > MinX) and (x < MaxX)) and ((y > MinY) and (y < MaxY)) 
+  then begin
+    Print('Na Area');
+  end
+  else begin Print('Fora'); end;
+
+end.

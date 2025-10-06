@@ -1,0 +1,199 @@
+program XPMonitor;
+
+uses
+  SysUtils, Classes;
+
+// Constantes para configuração
+const
+  UPDATE_INTERVAL_MS = 1000;  // Intervalo de atualização em milissegundos
+  LOG_FILE = 'xp_log.txt';    // Arquivo para registro de logs
+
+// Tipos personalizados
+type
+  TPlayerXPInfo = record
+    Level: Byte;
+    CurrentXP: Int64;
+    XPToNextLevel: Int64;
+    LastXP: Int64;
+    StartTime: TDateTime;
+    TotalXPGained: Int64;
+  end;
+
+// Variáveis globais
+var
+  Player: TPlayerXPInfo;
+  Running: Boolean = True;
+  LogList: TStringList;
+
+// Procedimento para inicialização
+procedure Initialize;
+begin
+  LogList := TStringList.Create;
+  InitializePlayerInfo;
+end;
+
+// Procedimento para finalização
+procedure Finalize;
+begin
+  LogList.Free;
+end;
+
+// Obter informações iniciais do jogador do Adrenaline
+procedure InitializePlayerInfo;
+begin
+  Player.Level := User.Level;
+  Player.CurrentXP := User.Exp;
+  Player.XPToNextLevel := User.Exp2;
+  Player.LastXP := Player.CurrentXP;
+  Player.StartTime := Now;
+  Player.TotalXPGained := 0;
+end;
+
+// Função para calcular XP por hora
+function CalculateXpPerHour(XPGained: Int64; ElapsedTime: TDateTime): Double;
+var
+  ElapsedHours: Double;
+begin
+  ElapsedHours := (Now - Player.StartTime) * 24; // Converter dias em horas
+  if ElapsedHours > 0 then
+    Result := (XPGained) / ElapsedHours
+  else
+    Result := 0;
+end;
+
+// Função para formatar números com separadores de milhar
+function FormatNumber(Value: Int64): String;
+begin
+  Result := FormatFloat('#,##0', Value);
+end;
+
+// Função para formatar tempo decorrido
+function FormatElapsedTime(StartTime: TDateTime): String;
+var
+  TotalSeconds, Hours, Minutes, Seconds: Integer;
+begin
+  TotalSeconds := Round((Now - StartTime) * 86400);
+  Hours := TotalSeconds div 3600;
+  Minutes := (TotalSeconds mod 3600) div 60;
+  Seconds := TotalSeconds mod 60;
+  Result := Format('%dh %dm %ds', [Hours, Minutes, Seconds]);
+end;
+
+// Procedimento para exibir estatísticas
+procedure DisplayStats;
+var
+  XPGained: Int64;
+  XpPerHour: Double;
+begin
+  XPGained := Player.CurrentXP - Player.LastXP;
+  Player.TotalXPGained := Player.TotalXPGained + XPGained;
+  XpPerHour := CalculateXpPerHour(XPGained, Player.StartTime);
+
+  // Limpa a tela antes de exibir novas informações
+  Print('');
+  Print('=== XP Monitor ===');
+  Print('Level: ' + IntToStr(Player.Level));
+  Print('XP Atual: ' + FormatNumber(Player.CurrentXP) + 
+        ' / ' + FormatNumber(Player.XPToNextLevel));
+  Print('XP Ganho: ' + FormatNumber(XPGained) + 
+        ' (Total: ' + FormatNumber(Player.TotalXPGained) + ')');
+  Print('XP/Hora: ' + FormatNumber(Round(XpPerHour)));
+  Print('Tempo: ' + FormatElapsedTime(Player.StartTime));
+  Print('==================');
+  Print('');
+end;
+
+//Encontar Item Por ID
+function EncontraItem(id: integer): TL2Item;
+var item: TL2Item;
+
+begin
+  item := nil;
+  if Inventory.User.ByID(id, item) then
+    Result := item;
+end;
+
+
+// Procedimento para log em arquivo usando TStringList
+procedure LogToFile;
+var
+  LogText, alive: String;
+  item, ss: TL2Item;
+  XPGained: Int64;
+begin
+  if User.Dead then begin alive := 'False'; end
+  else begin alive := 'True'; end;
+  item:= EncontraItem(6361);
+  ss := EncontraItem(1464);
+  XPGained := Player.CurrentXP - Player.LastXP;
+  LogText := FormatDateTime('yyyy-mm-dd hh:nn:ss', Now) + ' * ' +
+             'Level: ' + IntToStr(Player.Level) + ' * ' +
+             'XP/H: ' + FormatNumber(Round(CalculateXpPerHour(XPGained, Player.StartTime))) + ' * ' +
+             item.name + ': ' + IntToStr(item.count) + ' * ' +
+             ss.name + ': ' + IntToStr(ss.count) + ' * ' +
+             'XP Ganho: ' + FormatNumber(XPGained) + ' * ' +
+             'Tempo: ' + FormatElapsedTime(Player.StartTime) + ' * ' +
+             'Personagem Vivo: ' + alive;
+
+
+          
+  // Adiciona nova entrada
+  LogList.Add(LogText);
+
+  // Salva no arquivo
+  try
+    LogList.SaveToFile(LOG_FILE);
+  except
+    on E: Exception do
+      Print('Erro ao salvar log: ' + E.Message);
+  end;
+end;
+
+// Função para verificar se o usuário quer sair
+function ShouldQuit: Boolean;
+begin
+  // Implementação depende da API do Adrenaline
+  // Exemplo fictício - ajuste conforme necessário
+  Result := False;
+end;
+
+// Procedimento principal
+begin
+  try
+    Initialize;
+    
+    Print('Monitoramento de XP iniciado...');
+
+    while Running do
+    begin
+      // Atualiza informações do jogador
+      Player.Level := User.Level;
+      Player.CurrentXP := User.Exp;
+      Player.XPToNextLevel := User.Exp2;
+
+      // Exibe estatísticas
+      DisplayStats;
+
+      // Limpa Antes de escrever
+      LogList.Clear;
+
+      // Registra em arquivo
+      LogToFile;
+
+      // Verifica se usuário quer sair
+      if ShouldQuit then
+        Running := False;
+
+      if User.Dead then exit;  
+      // Intervalo entre verificações
+      Delay(UPDATE_INTERVAL_MS);
+    end;
+    
+    Print('Monitoramento encerrado.');
+  except
+    on E: Exception do
+      Print('Erro: ' + E.Message);
+  end;
+  
+  Finalize;
+end.
