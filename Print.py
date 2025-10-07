@@ -2,7 +2,7 @@ import pyautogui
 import pygetwindow as gw # Import pygetwindow for more flexible window searching
 import time
 
-def capture_specific_window(title_part: str, output_filename: str = 'fota.png'):
+def capture_specific_window(title_part: str, output_filename: str = 'foto.png'):
     """
     Captures a screenshot of a specific window by part of its title.
 
@@ -69,3 +69,4 @@ if __name__ == "__main__":
         print("Captura de tela concluída com sucesso.")
     else:
         print("Falha na captura de tela.")
+
